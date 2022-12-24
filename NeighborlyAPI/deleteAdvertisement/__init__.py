@@ -1,27 +1,19 @@
+import json
+import logging
+
 import azure.functions as func
-import pymongo
-from bson.objectid import ObjectId
 
 
-def main(req: func.HttpRequest) -> func.HttpResponse:
+def main(event: func.EventHubEvent):
+    body = event.get_body().decode()
+    logging.info(f"Function triggered to process a message: {body}")
+    logging.info(f"  EnqueuedTimeUtc = {event.enqueued_time}")
+    logging.info(f"  SequenceNumber = {event.sequence_number}")
+    logging.info(f"  Offset = {event.offset}")
 
-    id = req.params.get('id')
+    result = json.loads(body)
+    logging.info("Python EventGrid trigger processed an event: {}".format(result))
 
-    if id:
-        try:
-            url = "localhost"  # TODO: Update with appropriate MongoDB connection information
-            client = pymongo.MongoClient(url)
-            database = client['azure']
-            collection = database['advertisements']
-            
-            query = {'_id': ObjectId(id)}
-            result = collection.delete_one(query)
-            return func.HttpResponse("")
-
-        except:
-            print("could not connect to mongodb")
-            return func.HttpResponse("could not connect to mongodb", status_code=500)
-
-    else:
-        return func.HttpResponse("Please pass an id in the query string",
-                                 status_code=400)
+    # Metadata
+    for key in event.metadata:
+        logging.info(f"Metadata: {key} = {event.metadata[key]}")

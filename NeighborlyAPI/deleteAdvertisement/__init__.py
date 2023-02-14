@@ -1,19 +1,25 @@
-import json
-import logging
-
 import azure.functions as func
 
+import unit_of_work
 
-def main(event: func.EventHubEvent):
-    body = event.get_body().decode()
-    logging.info(f"Function triggered to process a message: {body}")
-    logging.info(f"  EnqueuedTimeUtc = {event.enqueued_time}")
-    logging.info(f"  SequenceNumber = {event.sequence_number}")
-    logging.info(f"  Offset = {event.offset}")
 
-    result = json.loads(body)
-    logging.info("Python EventGrid trigger processed an event: {}".format(result))
+def main(req: func.HttpRequest) -> func.HttpResponse:
 
-    # Metadata
-    for key in event.metadata:
-        logging.info(f"Metadata: {key} = {event.metadata[key]}")
+    id = req.params.get("id")
+
+    if id:
+        try:
+            uow = unit_of_work.MongoUnitOfWork()
+            collection_name = "advertisements"
+            result = uow.delete_by_id(collection_name, id)
+
+            return func.HttpResponse("Advertisement deleted successfully.")
+
+        except:
+            print("could not connect to mongodb")
+            return func.HttpResponse("could not connect to mongodb", status_code=500)
+
+    else:
+        return func.HttpResponse(
+            "Please pass an id in the query string", status_code=400
+        )
